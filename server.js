@@ -1,22 +1,76 @@
-import express from "express";
-import cors from "cors";
+import cors from 'cors'
+import express from 'express'
+import mongoose from 'mongoose'
 
-// Defines the port the app will run on. Defaults to 8080, but can be overridden
-// when starting the server. Example command to overwrite PORT env variable value:
-// PORT=9000 npm start
-const port = process.env.PORT || 8080;
-const app = express();
+const mongoUrl =
+	process.env.MONGO_URL || 'mongodb://localhost/project-resturant-reservations'
+mongoose.connect(mongoUrl)
+mongoose.Promise = Promise
 
-// Add middlewares to enable cors and json body parsing
-app.use(cors());
-app.use(express.json());
+const port = process.env.PORT || 8080
+const app = express()
+
+app.use(cors())
+app.use(express.json())
+
+//model
+const { Schema, model } = mongoose
+
+const reservationSchema = new Schema({
+	guestName: {
+		type: String,
+		required: true,
+		minlength: 4,
+	},
+	guestPhone: {
+		type: String,
+		required: true,
+		minlength: 10,
+	},
+	date: {
+		type: Date,
+		required: true,
+	},
+	partySize: {
+		type: Number,
+		required: true,
+		min: 1,
+		max: 10,
+	},
+})
+
+const Reservation = model('Reservation', reservationSchema)
 
 // Start defining your routes here
-app.get("/", (req, res) => {
-  res.send("Hello Technigo!");
-});
+app.get('/', (req, res) => {
+	res.send('Hello Technigo!')
+})
+
+app.post('/reservations', async (req, res) => {
+	const { guestName, guestPhone, date, partySize } = req.body
+
+	try {
+		const reservation = await new Reservation({
+			guestName,
+			guestPhone,
+			date,
+			partySize,
+		}).save()
+		res.status(201).json({
+			success: true,
+			response: reservation,
+			message: 'Reservation created successfully',
+		})
+	} catch (error) {
+		res.status(404).json({
+			success: false,
+			response: error,
+			message: "Reservation couldn't be made",
+		})
+	}
+})
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+	console.log(`Server running on http://localhost:${port}`)
+})
